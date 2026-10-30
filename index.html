@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- SEO: troque os textos abaixo pelos dados da sua loja (também dá para editar no painel › Loja › SEO) -->
+  <title>Cardápio Online — peça seu lanche</title>
+  <meta name="description" content="Peça online: lanches, porções, bebidas e sobremesas com entrega rápida. Veja o cardápio completo e faça seu pedido.">
+  <meta name="theme-color" content="#EA580C">
+  <link rel="canonical" href="/">
+
+  <!-- Open Graph (prévia ao compartilhar no WhatsApp, Instagram, Facebook) -->
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="Cardápio Online">
+  <meta property="og:title" content="Cardápio Online — peça seu lanche">
+  <meta property="og:description" content="Veja o cardápio completo e faça seu pedido em poucos toques.">
+  <meta property="og:image" content="/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/cliente.css">
+
+  <script type="application/ld+json" id="ld-json">
+  { "@context": "https://schema.org", "@type": "Restaurant", "name": "Cardápio Online", "servesCuisine": "Lanches", "hasMenu": "/" }
+  </script>
+  <script>
+    // Tela de abertura: usa a cor e a logo da última visita para aparecer já na cor da marca
+    try { var s = JSON.parse(localStorage.getItem("co_splash") || "null"); if (s) { if (s.pri) document.documentElement.style.setProperty("--pri", s.pri); if (s.fundo) document.documentElement.dataset.theme = s.fundo; } window.__splash = s; } catch (e) {}
+  </script>
+</head>
+<body>
+  <div class="splash" id="splash" role="status" aria-label="Carregando"><div class="splash-logo"><div class="splash-img" id="splash-img"><i class="ti ti-tools-kitchen-2"></i></div></div></div>
+  <script>try { var l = window.__splash && window.__splash.logo; if (l) { var i = document.getElementById("splash-img"); i.style.backgroundImage = "url('" + l + "')"; i.innerHTML = ""; } } catch (e) {}</script>
+
+  <a href="#cardapio" class="sr">Pular para o cardápio</a>
+
+  <header class="hero" id="hero">
+    <div class="hero-capa" id="capa"></div>
+    <div class="hero-info wrap">
+      <div class="logo" id="logo" aria-hidden="true"><i class="ti ti-tools-kitchen-2"></i></div>
+      <div class="hero-txt">
+        <h1 id="nome-loja">Cardápio Online</h1>
+        <p id="slogan" class="slogan"></p>
+        <div class="hero-meta">
+          <span class="badge" id="status-loja">…</span>
+          <span id="meta-entrega" class="meta-item"></span>
+          <span id="meta-minimo" class="meta-item"></span>
+        </div>
+      </div>
+      <div class="hero-acoes">
+        <button class="btn btn-ico" id="btn-compartilhar-loja" aria-label="Compartilhar cardápio"><i class="ti ti-share"></i></button>
+        <button class="btn btn-ico" id="btn-info" aria-label="Informações da loja"><i class="ti ti-info-circle"></i></button>
+        <a class="btn btn-ico" href="/admin/" id="btn-adm" aria-label="Área administrativa" title="Área administrativa"><i class="ti ti-lock"></i></a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap" id="cardapio">
+    <section id="mesa-box" class="mesa-box oculto" aria-live="polite"></section>
+    <section id="acompanhar" class="acompanhar oculto" aria-live="polite"></section>
+
+    <div class="busca-nav" id="busca-nav">
+      <label class="busca">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <span class="sr">Buscar no cardápio</span>
+        <input type="search" id="busca" placeholder="Buscar lanche, bebida…" autocomplete="off">
+      </label>
+      <nav class="cats" id="cats" aria-label="Categorias"></nav>
+    </div>
+
+    <section id="destaques" class="destaques oculto">
+      <h2 class="titulo-sec">Destaques</h2>
+      <div class="carrossel" id="lista-destaques"></div>
+    </section>
+
+    <div id="secoes"><div class="spinner"></div></div>
+  </main>
+
+  <footer class="rodape wrap" id="rodape"></footer>
+
+  <button class="barra-sacola oculto" id="barra-sacola">
+    <span class="bs-qtd" id="bs-qtd">0</span>
+    <span>Ver sacola</span>
+    <strong id="bs-total">R$ 0,00</strong>
+  </button>
+
+  <script type="module" src="/js/cliente.js"></script>
+</body>
+</html>

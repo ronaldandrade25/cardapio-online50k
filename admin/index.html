@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Painel — Cardápio Online</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#1F2937">
+  <link rel="manifest" href="/admin/manifest.json">
+  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <script>
+    // Tela de abertura: usa a cor e a logo da última visita ao cardápio
+    try { var s = JSON.parse(localStorage.getItem("co_splash") || "null"); if (s) { if (s.pri) document.documentElement.style.setProperty("--pri", s.pri); if (s.fundo) document.documentElement.dataset.theme = s.fundo; } window.__splash = s; } catch (e) {}
+  </script>
+</head>
+<body>
+  <div class="splash" id="splash" role="status" aria-label="Carregando"><div class="splash-logo"><div class="splash-img" id="splash-img"><i class="ti ti-tools-kitchen-2"></i></div></div></div>
+  <script>try { var l = window.__splash && window.__splash.logo; if (l) { var i = document.getElementById("splash-img"); i.style.backgroundImage = "url('" + l + "')"; i.innerHTML = ""; } } catch (e) {}</script>
+
+  <!-- Login -->
+  <section id="tela-login" class="login oculto">
+    <form class="login-card card" id="form-login" novalidate>
+      <div class="login-logo"><i class="ti ti-tools-kitchen-2"></i></div>
+      <h1>Cardápio Online</h1>
+      <p class="login-sub" id="login-sub">Entre no painel administrativo</p>
+      <label class="campo"><span>E-mail</span><input name="email" type="email" autocomplete="username" required></label>
+      <label class="campo"><span>Senha</span><input name="senha" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="msg-erro" id="login-erro" role="alert"></p>
+      <button class="btn btn-pri btn-l btn-bloco" id="btn-login">Entrar</button>
+      <div class="login-links">
+        <button type="button" class="btn btn-ghost btn-s" id="btn-esqueci">Esqueci a senha</button>
+      </div>
+      <p class="login-demo oculto" id="login-demo">Modo demo: use qualquer e-mail e senha (mín. 6 caracteres).</p>
+    </form>
+  </section>
+
+  <!-- Painel -->
+  <div id="app" class="app oculto">
+    <aside class="lateral" id="lateral">
+      <div class="lat-topo">
+        <div class="lat-logo" id="lat-logo"><i class="ti ti-tools-kitchen-2"></i></div>
+        <div class="lat-nome"><strong id="lat-loja">Cardápio Online</strong><small id="lat-user"></small></div>
+      </div>
+      <nav class="menu" id="menu" aria-label="Seções do painel"></nav>
+      <div class="lat-rodape">
+        <a class="btn btn-ghost btn-bloco" href="/" target="_blank" rel="noopener"><i class="ti ti-external-link"></i>Ver cardápio</a>
+        <button class="btn btn-ghost btn-bloco" id="btn-sair"><i class="ti ti-logout"></i>Sair</button>
+      </div>
+    </aside>
+    <div class="lat-fundo" id="lat-fundo"></div>
+
+    <div class="principal">
+      <header class="topo">
+        <button class="btn btn-ghost btn-ico menu-mob" id="btn-menu" aria-label="Abrir menu"><i class="ti ti-menu-2"></i></button>
+        <h1 id="titulo-sec">Painel</h1>
+        <div class="topo-acoes">
+          <label class="loja-toggle" title="Abrir ou pausar a loja manualmente">
+            <span id="txt-loja">Loja</span>
+            <span class="switch"><input type="checkbox" id="sw-loja"><i></i></span>
+          </label>
+          <button class="btn btn-s" id="btn-som"><i class="ti ti-volume-off"></i><span>Ativar som</span></button>
+        </div>
+      </header>
+      <main id="conteudo" class="conteudo"><div class="spinner"></div></main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <script type="module" src="/js/admin/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+rules_version = '2';
+
+// Regras de segurança do Cardápio Online.
+// Copie todo este conteúdo em: Firebase Console › Firestore Database › Regras › Publicar.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // SUPERADMIN: e-mail do dono do sistema. Crie esse usuário em Firebase › Authentication › Usuários.
+    // Ele acessa tudo sem precisar estar na coleção "equipe". Deve ser igual a SUPERADMIN_EMAIL em js/config.js.
+    function logado() { return request.auth != null; }
+    function superadmin() { return logado() && request.auth.token.email.lower() == 'rasistema25@gmail.com'; }
+    function equipe() { return superadmin() || (logado() && exists(/databases/$(database)/documents/equipe/$(request.auth.uid))); }
+    function dono() { return superadmin() || (equipe() && get(/databases/$(database)/documents/equipe/$(request.auth.uid)).data.perfil == 'dono'); }
+    function soMudou(campos) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos); }
+
+    // Configuração da loja: pública para leitura, só o dono altera
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if dono();
+      allow update: if equipe() && soMudou(['pausado']); // atendente pode pausar/reabrir a loja
+    }
+
+    // Cardápio público
+    match /categorias/{id} { allow read: if true; allow write: if equipe(); }
+    match /produtos/{id}   { allow read: if true; allow write: if equipe(); }
+    match /adicionais/{id} { allow read: if true; allow write: if equipe(); }
+    match /bairros/{id}    { allow read: if true; allow write: if dono(); }
+
+    // Cupom: o cliente consulta pelo código exato, mas não consegue listar todos
+    match /cupons/{codigo} {
+      allow get: if true;
+      allow list, write: if dono();
+      allow update: if equipe() && soMudou(['usos']);
+    }
+
+    // Pontos de fidelidade: consulta pelo telefone exato; só a equipe altera
+    match /fidelidade/{tel} {
+      allow get: if true;
+      allow list, write: if equipe();
+    }
+
+    // Cadastro de clientes: só a equipe
+    match /clientes/{tel} { allow read, write: if equipe(); }
+
+    // Mesas: o cliente só pode chamar o garçom ou pedir a conta
+    match /mesas/{id} {
+      allow read: if true;
+      allow write: if equipe();
+      allow update: if soMudou(['chamado', 'chamadoEm', 'contaPagamento'])
+                    && request.resource.data.chamado in ['garcom', 'conta'];
+    }
+
+    // Pedidos: qualquer um cria (status "novo"); quem tem o link acompanha; só a equipe lista e altera
+    match /pedidos/{id} {
+      allow get: if true;
+      allow list: if equipe();
+      allow create: if request.resource.data.status == 'novo'
+                    && request.resource.data.itens is list
+                    && request.resource.data.itens.size() > 0
+                    && request.resource.data.itens.size() <= 60
+                    && request.resource.data.total is number
+                    && request.resource.data.total >= 0
+                    && request.resource.data.criadoEm is number;
+      allow update, delete: if equipe();
+    }
+
+    // Número sequencial dos pedidos (#1, #2, ...): só pode avançar de 1 em 1
+    match /contadores/pedidos {
+      allow read: if true;
+      allow create: if request.resource.data.n == 1;
+      allow update: if request.resource.data.n == resource.data.n + 1 || equipe();
+    }
+
+    // Financeiro: somente o dono
+    match /contas_pagar/{id}   { allow read, write: if dono(); }
+    match /contas_receber/{id} { allow read, write: if dono(); }
+
+    // Cadastro de um membro da equipe: campos obrigatórios, e-mail com formato válido e perfil permitido.
+    // (A senha NÃO fica aqui: o e-mail e a senha de login ficam no Firebase Authentication.)
+    function cadastroValido() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['nome', 'email', 'perfil', 'criadoEm'])
+          && d.keys().hasAll(['nome', 'email', 'perfil'])
+          && d.nome is string && d.nome.size() > 0 && d.nome.size() <= 80
+          && d.email is string && d.email.size() <= 120 && d.email.matches('.+@.+\\..+')
+          && d.perfil in ['dono', 'atendente'];
+    }
+
+    // Equipe: pessoas autorizadas a entrar no painel. O ID do documento é o uid do usuário no Authentication.
+    //  - O superadmin (e-mail definido no topo) não precisa estar aqui: ele cadastra os demais.
+    //  - Só o dono/superadmin cria, altera e remove pessoas (e-mail + perfil dono/atendente).
+    //  - Ninguém remove o próprio acesso.
+    match /equipe/{uid} {
+      allow read: if equipe();
+      allow create, update: if dono() && cadastroValido();
+      allow delete: if dono() && request.auth.uid != uid;
+    }
+  }
+}
