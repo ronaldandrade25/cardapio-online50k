@@ -88,7 +88,7 @@ function notificar(titulo, corpo) {
 
 /** Cadastra o cliente assim que o pedido chega (não depende de finalizar). Contagem de pedidos/gasto continua ao finalizar. */
 const clientesRegistrados = new Set();
-function cadastrarClientes() {
+export function cadastrarClientes() {
   const feitos = new Set();
   for (const p of store.pedidos) { // do mais recente para o mais antigo
     const tel = p.cliente?.telefone;
@@ -98,7 +98,7 @@ function cadastrarClientes() {
     clientesRegistrados.add(p.id);
     db.set('clientes', tel, {
       nome: p.cliente.nome, telefone: tel, ultimoPedido: p.criadoEm, ...(p.endereco ? { endereco: p.endereco } : {})
-    }, true).catch(e => { clientesRegistrados.delete(p.id); console.error('Falha ao cadastrar cliente', e); });
+    }, true).catch(e => { clientesRegistrados.delete(p.id); console.error('Falha ao cadastrar cliente', e); toast('Não foi possível cadastrar o cliente. Confira as regras do Firestore.', 'erro'); });
   }
 }
 

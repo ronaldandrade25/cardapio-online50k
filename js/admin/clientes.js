@@ -1,7 +1,7 @@
 // Clientes (cadastro automático ao finalizar pedidos) e programa de fidelidade.
 import { db, inc } from '../db.js';
-import { store, onStore, salvarConfig } from './app.js';
-import { moeda, esc, dataHoraBR, mascaraTelefone, toast, modal } from '../utils.js';
+import { store, onStore, salvarConfig, cadastrarClientes } from './app.js';
+import { moeda, esc, dataHoraBR, mascaraTelefone, soDigitos, toast, modal } from '../utils.js';
 import { baixarCSV } from './financeiro.js';
 
 export function render(el) {
@@ -12,6 +12,7 @@ export function render(el) {
       <input class="inp" id="busca" placeholder="Buscar por nome ou telefone" aria-label="Buscar cliente">
       <span class="espaco"></span>
       <button class="btn" data-csv><i class="ti ti-download"></i>Exportar CSV</button>
+      <button class="btn btn-pri" data-novo><i class="ti ti-user-plus"></i>Cadastrar cliente</button>
     </div>
     <div class="card tabela-wrap"><table class="tabela"><thead><tr><th>Cliente</th><th>WhatsApp</th><th class="num">Pedidos</th><th class="num">Total gasto</th><th>Fidelidade</th><th>Último pedido</th><th></th></tr></thead>
     <tbody id="tb"></tbody></table></div>`;
@@ -75,14 +76,42 @@ export function render(el) {
     };
   }
 
+  function cadastrar() {
+    const m = modal(`<h2>Cadastrar cliente</h2><form novalidate>
+      <label class="campo"><span>Nome</span><input name="nome" required maxlength="80"></label>
+      <label class="campo"><span>WhatsApp</span><input name="telefone" inputmode="tel" required placeholder="(11) 98765-4321"></label>
+      <div class="grade2">
+        <label class="campo"><span>Rua e número</span><input name="rua" maxlength="100"></label>
+        <label class="campo"><span>Bairro</span><input name="bairro" maxlength="60"></label>
+      </div>
+      <p class="msg-erro" id="cl-erro"></p>
+      <div class="linha-btns"><button type="button" class="btn" data-c>Cancelar</button><button class="btn btn-pri">Salvar</button></div></form>`, { classe: 'modal-p' });
+    const f = m.el.querySelector('form');
+    m.el.querySelector('[data-c]').onclick = m.fechar;
+    f.telefone.oninput = e => { e.target.value = mascaraTelefone(e.target.value); };
+    f.onsubmit = async ev => {
+      ev.preventDefault();
+      const tel = soDigitos(f.telefone.value);
+      if (!f.nome.value.trim() || tel.length < 10) { m.el.querySelector('#cl-erro').textContent = 'Informe o nome e um WhatsApp válido com DDD.'; return; }
+      const rua = f.rua.value.trim(), bairro = f.bairro.value.trim();
+      try {
+        await db.set('clientes', tel, { nome: f.nome.value.trim(), telefone: tel, criadoEm: Date.now(), ...(rua || bairro ? { endereco: { rua, bairro } } : {}) }, true);
+        m.fechar(); toast('Cliente cadastrado');
+      } catch { m.el.querySelector('#cl-erro').textContent = 'Não foi possível salvar. Confira as regras do Firestore.'; }
+    };
+  }
+
+  el.querySelector('[data-novo]').onclick = cadastrar;
   el.querySelector('#busca').oninput = e => { busca = e.target.value; desenhar(); };
   el.querySelector('[data-csv]').onclick = () => baixarCSV('clientes.csv',
     [['Nome', 'WhatsApp', 'Pedidos', 'Total gasto', 'Pontos', 'Bairro', 'Último pedido'],
       ...clientes.map(c => [c.nome, mascaraTelefone(c.id), c.pedidos || 0, (c.totalGasto || 0).toFixed(2).replace('.', ','), fid[c.id]?.pontos || 0, c.endereco?.bairro || '', c.ultimoPedido ? dataHoraBR(c.ultimoPedido) : ''])]);
 
   desenharCfg();
+  cadastrarClientes(); // garante o cadastro dos pedidos já carregados
   const paradas = [
-    db.watch('clientes', { orderBy: ['ultimoPedido', 'desc'] }, l => { clientes = l; desenhar(); }),
+    // sem orderBy no servidor: o Firestore esconde documentos que não têm o campo ordenado
+    db.watch('clientes', {}, l => { clientes = l.sort((a, b) => (b.ultimoPedido || b.criadoEm || 0) - (a.ultimoPedido || a.criadoEm || 0)); desenhar(); }),
     db.watch('fidelidade', {}, l => { fid = Object.fromEntries(l.map(f => [f.id, f])); desenhar(); }),
     onStore(() => { desenharCfg(); desenhar(); })
   ];

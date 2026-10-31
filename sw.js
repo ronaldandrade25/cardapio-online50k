@@ -1,6 +1,6 @@
 // Service Worker: app abre rápido e funciona com internet instável.
 // Ao publicar uma nova versão, aumente o número abaixo para forçar a atualização.
-const VERSAO = 'co-v10';
+const VERSAO = 'co-v11';
 const ESSENCIAIS = [
   '/', '/index.html', '/pedido.html', '/admin/', '/admin/index.html', '/offline.html',
   '/css/base.css', '/css/cliente.css', '/css/admin.css',
