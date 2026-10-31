@@ -2,11 +2,12 @@
 import { db, auth } from '../db.js';
 import { DEMO } from '../config.js';
 import { semear } from '../seed.js';
-import { store, onStore, salvarConfig } from './app.js';
+import { store, onStore, salvarConfig, ABAS_PAINEL } from './app.js';
+import * as imp from './impressora.js';
 import { qrDataURL } from './mesas.js';
 import { esc, DIAS, PAGAMENTOS, statusLoja, aplicarTema, comprimirImagem, toast, modal, confirmar } from '../utils.js';
 
-const ABAS = [['dados', 'Dados da loja'], ['horarios', 'Horários'], ['aparencia', 'Cores da marca'], ['pagamentos', 'Pagamentos'], ['vendas', 'Upsell e SEO'], ['equipe', 'Equipe'], ['ferramentas', 'Link e QR do cardápio']];
+const ABAS = [['dados', 'Dados da loja'], ['horarios', 'Horários'], ['aparencia', 'Cores da marca'], ['pagamentos', 'Pagamentos'], ['vendas', 'Upsell e SEO'], ['impressora', 'Impressora'], ['equipe', 'Equipe'], ['ferramentas', 'Link e QR do cardápio']];
 const PALETAS = [['#EA580C', '#1F2937'], ['#DC2626', '#111827'], ['#16A34A', '#14532D'], ['#2563EB', '#0F172A'], ['#9333EA', '#1E1B4B'], ['#CA8A04', '#292524'], ['#DB2777', '#1F2937'], ['#0D9488', '#134E4A']];
 const urlSegura = u => String(u || '').replace(/["'()\\\s]/g, '');
 
@@ -23,7 +24,52 @@ export function render(el) {
 
   function desenhar() {
     pararEquipe?.(); pararEquipe = null;
-    ({ dados, horarios, aparencia, pagamentos, vendas, equipe, ferramentas })[aba]();
+    ({ dados, horarios, aparencia, pagamentos, vendas, impressora, equipe, ferramentas })[aba]();
+  }
+
+  /* ---------------- Impressora ---------------- */
+  function impressora() {
+    const ok = imp.suportaBluetooth();
+    area().innerHTML = `<div class="card form-sec">
+      <h2><i class="ti ti-printer"></i> Impressora Bluetooth</h2>
+      <p>Conecte uma impressora térmica (58/80 mm) por Bluetooth. A configuração vale só para este aparelho.</p>
+      ${ok ? '' : '<p class="msg-erro">Este navegador não suporta Bluetooth. Use o Chrome no Android ou no computador (não funciona no iPhone).</p>'}
+      <p><span class="badge" id="imp-status"></span></p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+        <button class="btn btn-pri" data-conectar ${ok ? '' : 'disabled'}><i class="ti ti-bluetooth"></i>Conectar impressora</button>
+        <button class="btn" data-teste><i class="ti ti-file-text"></i>Imprimir teste</button>
+        <button class="btn btn-ghost" data-desconectar style="color:var(--danger)">Desconectar</button>
+      </div>
+      <label class="campo"><span>Largura do papel</span><select id="imp-larg"><option value="32">58 mm (32 colunas)</option><option value="48">80 mm (48 colunas)</option></select></label>
+      <div class="linha-cfg"><div><strong>Impressão automática</strong><br><small>Imprime cada novo pedido assim que chegar, com a impressora conectada e o painel aberto.</small></div>
+        <label class="switch"><input type="checkbox" id="imp-auto" ${imp.impressaoAutomatica() ? 'checked' : ''}><i></i></label></div>
+    </div>`;
+    const a = area();
+    const status = () => {
+      const s = a.querySelector('#imp-status');
+      if (!s) return;
+      const on = imp.conectada();
+      s.className = 'badge ' + (on ? 'badge-ok' : '');
+      s.textContent = on ? `Conectada: ${imp.nomeImpressora()}` : imp.nomeImpressora() ? `Desconectada (${imp.nomeImpressora()})` : 'Nenhuma impressora conectada';
+    };
+    status();
+    const parar = imp.onImpressora(status);
+    const antes = pararEquipe;
+    pararEquipe = () => { parar(); antes?.(); };
+    a.querySelector('#imp-larg').value = String(imp.colunas());
+    a.querySelector('#imp-larg').onchange = e => imp.setColunas(e.target.value);
+    a.querySelector('#imp-auto').onchange = e => {
+      if (e.target.checked && !imp.conectada()) toast('Conecte a impressora para a impressão automática funcionar', 'erro');
+      imp.setImpressaoAutomatica(e.target.checked);
+      toast(e.target.checked ? 'Impressão automática ativada' : 'Impressão automática desativada');
+    };
+    a.querySelector('[data-conectar]').onclick = async () => {
+      try { await imp.conectar(); toast('Impressora conectada'); } catch (e) { if (e.name !== 'NotFoundError') toast(e.message || 'Não foi possível conectar', 'erro'); }
+    };
+    a.querySelector('[data-teste]').onclick = async () => {
+      try { await imp.imprimirTeste(store.cfg); toast('Teste enviado'); } catch (e) { toast(e.message || 'Falha ao imprimir', 'erro'); }
+    };
+    a.querySelector('[data-desconectar]').onclick = () => { imp.desconectar(); toast('Impressora desconectada'); };
   }
 
   /* ---------------- Dados ---------------- */
@@ -193,7 +239,7 @@ export function render(el) {
   /* ---------------- Equipe ---------------- */
   function equipe() {
     area().innerHTML = `<div class="card form-sec">
-      <div class="painel-cab"><div><h2>Equipe</h2><p style="color:var(--txt2);font-size:14px">Atendentes veem Pedidos, Mesas e Cardápio. O dono vê tudo, inclusive o financeiro.</p></div>
+      <div class="painel-cab"><div><h2>Equipe</h2><p style="color:var(--txt2);font-size:14px">Ao cadastrar, escolha quais abas cada atendente pode acessar. O dono vê tudo, inclusive o financeiro.</p></div>
         <button class="btn btn-pri" data-novo><i class="ti ti-user-plus"></i>Adicionar pessoa</button></div>
       <div class="tabela-wrap"><table class="tabela"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th></th></tr></thead><tbody id="tb-eq"></tbody></table></div></div>`;
     area().querySelector('[data-novo]').onclick = novoMembro;
@@ -215,15 +261,21 @@ export function render(el) {
       <label class="campo"><span>E-mail</span><input name="email" type="email" required></label>
       <label class="campo"><span>Senha inicial</span><input name="senha" type="text" minlength="6" required><small>Mínimo 6 caracteres. A pessoa pode trocar em “Esqueci a senha”.</small></label>
       <label class="campo"><span>Perfil</span><select name="perfil"><option value="atendente">Atendente</option><option value="dono">Dono (acesso total)</option></select></label>
+      <div id="eq-abas"><span class="rotulo">Abas que esta pessoa pode acessar</span>
+        ${ABAS_PAINEL.map(([k, n, padrao]) => `<div class="linha-cfg"><strong>${n}</strong><label class="switch"><input type="checkbox" data-aba-perm="${k}" ${padrao ? 'checked' : ''}><i></i></label></div>`).join('')}</div>
       <p class="msg-erro" id="eq-erro"></p>
       <div class="linha-btns"><button type="button" class="btn" data-c>Cancelar</button><button class="btn btn-pri">Adicionar</button></div></form>`, { classe: 'modal-p' });
     const f = m.el.querySelector('form');
     m.el.querySelector('[data-c]').onclick = m.fechar;
+    const boxAbas = m.el.querySelector('#eq-abas');
+    f.perfil.onchange = () => { boxAbas.hidden = f.perfil.value === 'dono'; };
     f.onsubmit = async ev => {
       ev.preventDefault();
       if (!f.nome.value.trim() || !/\S+@\S+\.\S+/.test(f.email.value) || f.senha.value.length < 6) { m.el.querySelector('#eq-erro').textContent = 'Preencha nome, e-mail válido e senha com 6+ caracteres.'; return; }
+      const abas = [...m.el.querySelectorAll('[data-aba-perm]:checked')].map(i => i.dataset.abaPerm);
+      if (f.perfil.value === 'atendente' && !abas.length) { m.el.querySelector('#eq-erro').textContent = 'Libere ao menos uma aba.'; return; }
       try {
-        await auth.criarMembro(f.nome.value.trim(), f.email.value.trim(), f.senha.value, f.perfil.value);
+        await auth.criarMembro(f.nome.value.trim(), f.email.value.trim(), f.senha.value, f.perfil.value, abas);
         m.fechar(); toast('Pessoa adicionada');
       } catch (err) {
         m.el.querySelector('#eq-erro').textContent = (err.code || '').includes('email-already-in-use') ? 'Este e-mail já tem conta.' : 'Não foi possível criar o acesso.';

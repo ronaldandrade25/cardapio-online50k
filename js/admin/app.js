@@ -2,6 +2,7 @@
 import { db, auth } from '../db.js';
 import { DEMO } from '../config.js';
 import { semear } from '../seed.js';
+import { impressaoAutomatica, conectada, reconectar } from './impressora.js';
 import { aplicarTema, mesclarConfig, statusLoja, bip, liberarSom, somLiberado, toast, esc, registrarSW } from '../utils.js';
 
 const $ = s => document.querySelector(s);
@@ -27,7 +28,10 @@ const ROTAS = {
   entrega: { nome: 'Entrega', icone: 'ti-motorbike', perfis: ['dono'], mod: () => import('./entrega.js') },
   loja: { nome: 'Configurações', icone: 'ti-settings', perfis: ['dono'], mod: () => import('./loja.js') }
 };
-const permitidas = () => Object.entries(ROTAS).filter(([, r]) => r.perfis.includes(store.user?.perfil));
+export const ABAS_PAINEL = Object.entries(ROTAS).map(([k, r]) => [k, r.nome, r.perfis.includes('atendente')]);
+// Dono vê tudo; atendente vê as abas liberadas no cadastro (sem lista, usa o padrão: Pedidos, Mesas e Cardápio)
+const podeVer = (k, r) => store.user?.perfil === 'dono' || (Array.isArray(store.user?.abas) ? store.user.abas.includes(k) : r.perfis.includes(store.user?.perfil));
+const permitidas = () => Object.entries(ROTAS).filter(([k, r]) => podeVer(k, r));
 
 function renderMenu() {
   const atual = rotaAtual();
@@ -82,7 +86,24 @@ function notificar(titulo, corpo) {
   }
 }
 
+/** Cadastra o cliente assim que o pedido chega (não depende de finalizar). Contagem de pedidos/gasto continua ao finalizar. */
+const clientesRegistrados = new Set();
+function cadastrarClientes() {
+  const feitos = new Set();
+  for (const p of store.pedidos) { // do mais recente para o mais antigo
+    const tel = p.cliente?.telefone;
+    if (!tel || feitos.has(tel)) continue;
+    feitos.add(tel);
+    if (clientesRegistrados.has(p.id)) continue;
+    clientesRegistrados.add(p.id);
+    db.set('clientes', tel, {
+      nome: p.cliente.nome, telefone: tel, ultimoPedido: p.criadoEm, ...(p.endereco ? { endereco: p.endereco } : {})
+    }, true).catch(e => { clientesRegistrados.delete(p.id); console.error('Falha ao cadastrar cliente', e); });
+  }
+}
+
 function verificarNovidades() {
+  cadastrarClientes();
   const novos = store.pedidos.filter(p => p.status === 'novo');
   for (const p of novos) {
     if (!vistos.has(p.id)) {
@@ -90,6 +111,7 @@ function verificarNovidades() {
       if (!primeiraCarga) {
         notificar(`Novo pedido #${p.numero}`, `${p.cliente?.nome || ''} · ${p.tipo === 'mesa' ? 'Mesa ' + p.mesa : p.tipo}`);
         toast(`Novo pedido #${p.numero}`);
+        if (impressaoAutomatica() && conectada()) import('./acoes.js').then(m => m.imprimir(p));
       }
     }
   }
@@ -149,6 +171,7 @@ function iniciarPainel(u) {
     emitir();
   });
 
+  reconectar();
   window.addEventListener('hashchange', navegar);
   navegar();
   setInterval(renderLojaToggle, 60000);

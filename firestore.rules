@@ -79,11 +79,12 @@ service cloud.firestore {
     // (A senha NÃO fica aqui: o e-mail e a senha de login ficam no Firebase Authentication.)
     function cadastroValido() {
       let d = request.resource.data;
-      return d.keys().hasOnly(['nome', 'email', 'perfil', 'criadoEm'])
+      return d.keys().hasOnly(['nome', 'email', 'perfil', 'abas', 'criadoEm'])
           && d.keys().hasAll(['nome', 'email', 'perfil'])
           && d.nome is string && d.nome.size() > 0 && d.nome.size() <= 80
           && d.email is string && d.email.size() <= 120 && d.email.matches('.+@.+\\..+')
-          && d.perfil in ['dono', 'atendente'];
+          && d.perfil in ['dono', 'atendente']
+          && (!('abas' in d) || (d.abas is list && d.abas.size() <= 12));
     }
 
     // Equipe: pessoas autorizadas a entrar no painel. O ID do documento é o uid do usuário no Authentication.

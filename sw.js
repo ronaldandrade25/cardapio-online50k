@@ -1,13 +1,13 @@
 // Service Worker: app abre rápido e funciona com internet instável.
 // Ao publicar uma nova versão, aumente o número abaixo para forçar a atualização.
-const VERSAO = 'co-v9';
+const VERSAO = 'co-v10';
 const ESSENCIAIS = [
   '/', '/index.html', '/pedido.html', '/admin/', '/admin/index.html', '/offline.html',
   '/css/base.css', '/css/cliente.css', '/css/admin.css',
   '/js/config.js', '/js/db.js', '/js/utils.js', '/js/seed.js', '/js/cliente.js', '/js/pedido.js',
   '/js/admin/app.js', '/js/admin/acoes.js', '/js/admin/pedidos.js', '/js/admin/mesas.js', '/js/admin/cardapio.js',
   '/js/admin/cupons.js', '/js/admin/clientes.js', '/js/admin/financeiro.js', '/js/admin/dashboard.js',
-  '/js/admin/entrega.js', '/js/admin/loja.js',
+  '/js/admin/entrega.js', '/js/admin/loja.js', '/js/admin/impressora.js',
   '/manifest.json', '/admin/manifest.json', '/assets/icon.svg', '/assets/icon-192.png', '/assets/icon-512.png'
 ];
 

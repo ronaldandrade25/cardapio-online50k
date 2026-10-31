@@ -1,6 +1,7 @@
 // Ações sobre pedidos usadas em Pedidos e Mesas: mudar status, finalizar, cancelar, imprimir.
 import { db, inc } from '../db.js';
 import { store } from './app.js';
+import { conectada, imprimirBluetooth } from './impressora.js';
 import { moeda, esc, STATUS, TIPOS, PAGAMENTOS, fluxoStatus, dataHoraBR, mascaraTelefone, toast } from '../utils.js';
 
 export function proximoStatus(p) {
@@ -62,6 +63,15 @@ export function pagamentoTexto(p) {
 
 /** Comanda para impressora térmica (58/80 mm) */
 export function imprimir(p) {
+  const c = store.cfg;
+  if (conectada()) {
+    imprimirBluetooth(p, c).catch(() => { toast('Falha na impressora Bluetooth. Imprimindo pelo navegador.', 'erro'); imprimirNavegador(p); });
+    return;
+  }
+  imprimirNavegador(p);
+}
+
+function imprimirNavegador(p) {
   const c = store.cfg;
   const w = window.open('', '_blank', 'width=380,height=640');
   if (!w) { toast('Permita pop-ups para imprimir', 'erro'); return; }

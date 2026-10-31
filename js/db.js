@@ -254,7 +254,7 @@ export const auth = {
           return cb({ uid: user.uid, email: user.email, nome: user.displayName || 'Superadmin', perfil: 'dono' });
         }
         const membro = await db.get('equipe', user.uid).catch(() => null);
-        cb(membro ? { uid: user.uid, email: user.email, nome: membro.nome, perfil: membro.perfil } : { uid: user.uid, email: user.email, semAcesso: true });
+        cb(membro ? { uid: user.uid, email: user.email, nome: membro.nome, perfil: membro.perfil, abas: membro.abas } : { uid: user.uid, email: user.email, semAcesso: true });
       });
     });
   },
@@ -282,15 +282,16 @@ export const auth = {
   },
 
   /** Cria um membro da equipe sem deslogar o dono (usa uma 2ª instância do Firebase). */
-  async criarMembro(nome, email, senha, perfil) {
-    if (DEMO) return db.set('equipe', novoId(), { nome, email, perfil, criadoEm: Date.now() });
+  async criarMembro(nome, email, senha, perfil, abas) {
+    const extra = perfil === 'atendente' && abas ? { abas } : {};
+    if (DEMO) return db.set('equipe', novoId(), { nome, email, perfil, ...extra, criadoEm: Date.now() });
     const { appM, A } = await firebase();
     const nomeApp = 'cadastro-' + Date.now();
     const app2 = appM.initializeApp(firebaseConfig, nomeApp);
     const a2 = A.getAuth(app2);
     try {
       const cred = await A.createUserWithEmailAndPassword(a2, email, senha);
-      await db.set('equipe', cred.user.uid, { nome, email, perfil, criadoEm: Date.now() });
+      await db.set('equipe', cred.user.uid, { nome, email, perfil, ...extra, criadoEm: Date.now() });
       await A.signOut(a2);
     } finally {
       await appM.deleteApp(app2);
